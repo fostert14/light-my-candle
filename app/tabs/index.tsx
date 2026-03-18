@@ -1,69 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import Candle from '@/components/Candle';
+import Sidebar from '@/components/Sidebar';
+import AddPartnerModal from '@/components/AddPartnerModal';
 import { useCandle } from '@/contexts/CandleContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { Colors, Spacing } from '@/constants/theme';
 
-// This is THE screen — where the magic happens.
-//
-// Layout:
-// - If not paired: shows a message directing to Settings to pair
-// - If paired: shows both candles side by side
-//   - Your candle (left): tap to light/extinguish
-//   - Partner's candle (right): tap to blow out (only if lit)
-//
-// The real-time subscription in CandleContext means partner's candle
-// updates instantly when they light it on their phone.
-
 export default function CandleScreen() {
-  const { user } = useAuth();
   const {
     partnership,
     myCandle,
     partnerCandle,
     partnerName,
-    loading,
     toggleMyCandle,
     blowOutPartnerCandle,
   } = useCandle();
 
-  // Handle tapping your own candle
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [addPartnerOpen, setAddPartnerOpen] = useState(false);
+
+  const isPaired = !!partnership?.user2_id;
+
   const handleToggleMine = async () => {
-    // Haptic feedback makes the interaction feel physical
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await toggleMyCandle();
   };
 
-  // Handle blowing out partner's candle
   const handleBlowOut = async () => {
     if (!partnerCandle?.is_lit) return;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     await blowOutPartnerCandle();
   };
 
-  // Not paired yet — prompt user to go to settings
-  if (!partnership || !partnership.user2_id) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>🕯️</Text>
-          <Text style={styles.emptyTitle}>No partner yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Go to Settings to generate a pair code{'\n'}or enter your partner's code
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Determine display status message
   const getStatusMessage = () => {
     const myLit = myCandle?.is_lit;
     const theirLit = partnerCandle?.is_lit;
-
     if (myLit && theirLit) return "You're both in the mood ✨";
     if (myLit && !theirLit) return 'Your candle is lit...waiting';
     if (!myLit && theirLit) return `${partnerName || 'Partner'} lit their candle 👀`;
@@ -72,33 +46,58 @@ export default function CandleScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Status message at top */}
-      <Text style={styles.statusText}>{getStatusMessage()}</Text>
-
-      {/* Candle display area */}
-      <View style={styles.candleRow}>
-        {/* YOUR candle */}
-        <Candle
-          isLit={myCandle?.is_lit ?? false}
-          size="large"
-          onPress={handleToggleMine}
-          label="You"
-        />
-
-        {/* PARTNER'S candle */}
-        <Candle
-          isLit={partnerCandle?.is_lit ?? false}
-          size="large"
-          onPress={handleBlowOut}
-          label={partnerName || 'Partner'}
-        />
+      {/* Top bar */}
+      <View style={styles.topBar}>
+        <Pressable onPress={() => setSidebarOpen(true)} style={styles.hamburger} hitSlop={12}>
+          <Ionicons name="menu" size={28} color={Colors.warmWhite} />
+        </Pressable>
       </View>
 
-      {/* Hint text at bottom */}
-      <Text style={styles.hintText}>
-        Tap your candle to {myCandle?.is_lit ? 'extinguish' : 'light'} it
-        {partnerCandle?.is_lit ? '\nTap partner\'s candle to blow it out' : ''}
-      </Text>
+      {/* Main content */}
+      {isPaired ? (
+        // ── Paired state: show both candles ──────────────────────
+        <View style={styles.pairedContent}>
+          <Text style={styles.statusText}>{getStatusMessage()}</Text>
+
+          <View style={styles.candleRow}>
+            <Candle
+              isLit={myCandle?.is_lit ?? false}
+              size="large"
+              onPress={handleToggleMine}
+              label="You"
+            />
+            <Candle
+              isLit={partnerCandle?.is_lit ?? false}
+              size="large"
+              onPress={handleBlowOut}
+              label={partnerName || 'Partner'}
+            />
+          </View>
+
+          <Text style={styles.hintText}>
+            Tap your candle to {myCandle?.is_lit ? 'extinguish' : 'light'} it
+            {partnerCandle?.is_lit ? "\nTap partner's candle to blow it out" : ''}
+          </Text>
+        </View>
+      ) : (
+        // ── Unpaired state: Add Partner button ───────────────────
+        <View style={styles.unpairedContent}>
+          <Text style={styles.unpairedEmoji}>🕯️</Text>
+          <Pressable
+            style={styles.addPartnerButton}
+            onPress={() => setAddPartnerOpen(true)}
+          >
+            <Ionicons name="add" size={28} color="#fff" />
+            <Text style={styles.addPartnerText}>Add Partner</Text>
+          </Pressable>
+          <Text style={styles.unpairedHint}>
+            Connect with someone to share a candle
+          </Text>
+        </View>
+      )}
+
+      <Sidebar visible={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <AddPartnerModal visible={addPartnerOpen} onClose={() => setAddPartnerOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -107,6 +106,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  topBar: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
+  hamburger: {
+    alignSelf: 'flex-start',
+  },
+  // Paired layout
+  pairedContent: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -131,26 +142,33 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xxl,
     lineHeight: 22,
   },
-  emptyState: {
+  // Unpaired layout
+  unpairedContent: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xl,
+  },
+  unpairedEmoji: {
+    fontSize: 72,
+  },
+  addPartnerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.flame,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
+    borderRadius: 50,
   },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: Spacing.lg,
+  addPartnerText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.warmWhite,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: Colors.warmGray,
+  unpairedHint: {
+    fontSize: 15,
+    color: Colors.coolGray,
     textAlign: 'center',
-    lineHeight: 24,
   },
 });
