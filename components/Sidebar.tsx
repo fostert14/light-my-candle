@@ -22,11 +22,7 @@ type Props = {
 };
 
 export default function Sidebar({ visible, onClose }: Props) {
-  // useSafeAreaInsets reads from the SafeAreaProvider that wraps the app.
-  // Because it's called OUTSIDE the Modal, the insets are already measured
-  // and available as plain numbers — no waiting for a layout pass inside
-  // the Modal. This is why SafeAreaView inside a Modal is unreliable on
-  // first open but this approach works every time.
+
   const insets = useSafeAreaInsets();
 
   const [displayed, setDisplayed] = useState(false);
@@ -84,9 +80,6 @@ export default function Sidebar({ visible, onClose }: Props) {
 
         {/* Sidebar panel */}
         <Animated.View style={[styles.sidebar, { transform: [{ translateX }] }]}>
-          {/* Instead of SafeAreaView, we apply the top inset as padding manually.
-              The inset value comes from the hook which reads from the app-level
-              SafeAreaProvider — it's a plain number, already known, no measuring needed. */}
           <View style={[styles.safeArea, { paddingTop: insets.top }]}>
             <View style={styles.header}>
               <Text style={styles.appName}>Light My Candle</Text>
