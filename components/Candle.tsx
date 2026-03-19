@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,34 +10,44 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/theme';
 
 type CandleProps = {
   isLit: boolean;
-  size?: 'small' | 'large';
+  size?: 'small' | 'large' | 'fullscreen';
   onPress?: () => void;
   disabled?: boolean;
   label?: string;
 };
 
 // This is the core visual component — the candle with an animated flame.
-// 
+//
 // How the animation works:
 // - `flicker` is a shared value that oscillates between 0 and 1 repeatedly
 // - We use it to drive subtle scale/opacity changes on the flame layers
 // - `glowPulse` drives a slower breathing effect on the background glow
 // - When isLit changes, `litProgress` animates from 0→1 or 1→0 with a spring
 //   to create a smooth light/extinguish transition
+// - `bodyDimStyle` dims the wax body + wick to 0.3 opacity when unlit (fullscreen only)
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function Candle({ isLit, size = 'large', onPress, disabled, label }: CandleProps) {
   const flicker = useSharedValue(0);
   const glowPulse = useSharedValue(0);
   const litProgress = useSharedValue(isLit ? 1 : 0);
 
+  const isFullscreen = size === 'fullscreen';
   const isLarge = size === 'large';
-  const candleHeight = isLarge ? 160 : 100;
-  const candleWidth = isLarge ? 50 : 32;
-  const flameHeight = isLarge ? 50 : 30;
+
+  const candleHeight = isFullscreen ? SCREEN_HEIGHT * 0.45 : isLarge ? 160 : 100;
+  const candleWidth = isFullscreen ? SCREEN_WIDTH * 0.65 : isLarge ? 50 : 32;
+  const flameHeight = isFullscreen ? 90 : isLarge ? 50 : 30;
+  const wickHeight = isFullscreen ? 20 : isLarge ? 12 : 8;
+  const glowSize = isFullscreen ? SCREEN_WIDTH * 0.85 : isLarge ? 200 : 120;
+  const outerFlameWidth = isFullscreen ? 44 : isLarge ? 24 : 16;
+  const innerFlameWidth = isFullscreen ? 22 : isLarge ? 12 : 8;
 
   useEffect(() => {
     // Animate litProgress when isLit changes — spring gives it a natural feel
@@ -72,45 +82,51 @@ export default function Candle({ isLit, size = 'large', onPress, disabled, label
   }, [isLit]);
 
   // Animated style for the outer flame (the orange/red part)
-  const flameStyle = useAnimatedStyle(() => {
-    const scale = interpolate(flicker.value, [0, 1], [0.9, 1.1]);
-    const opacity = litProgress.value;
-    return {
-      transform: [{ scaleX: scale }, { scaleY: interpolate(flicker.value, [0, 1], [0.95, 1.05]) }],
-      opacity,
-    };
-  });
+  const flameStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scaleX: interpolate(flicker.value, [0, 1], [0.9, 1.1]) },
+      { scaleY: interpolate(flicker.value, [0, 1], [0.95, 1.05]) },
+    ],
+    opacity: litProgress.value,
+  }));
 
   // Inner flame (brighter yellow core) — slightly different flicker timing
-  const innerFlameStyle = useAnimatedStyle(() => {
-    const scale = interpolate(flicker.value, [0, 1], [0.85, 1.15]);
-    return {
-      transform: [{ scale }],
-      opacity: litProgress.value,
-    };
-  });
+  const innerFlameStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(flicker.value, [0, 1], [0.85, 1.15]) }],
+    opacity: litProgress.value,
+  }));
 
   // The glow effect behind the candle — large, soft, pulsing
-  const glowStyle = useAnimatedStyle(() => {
-    const scale = interpolate(glowPulse.value, [0, 1], [1, 1.2]);
-    const opacity = interpolate(litProgress.value, [0, 1], [0, 0.3]);
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
+  const glowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(glowPulse.value, [0, 1], [1, 1.2]) }],
+    opacity: interpolate(litProgress.value, [0, 1], [0, isFullscreen ? 0.4 : 0.3]),
+  }));
+
+  // Fullscreen only: dim the wax body + wick to 0.3 when unlit, full opacity when lit
+  const bodyDimStyle = useAnimatedStyle(() => ({
+    opacity: isFullscreen ? interpolate(litProgress.value, [0, 1], [0.3, 1.0]) : 1,
+  }));
 
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={styles.container}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        styles.container,
+        isFullscreen && {
+          flex: 1,
+          width: '100%',
+          justifyContent: 'flex-end',
+          transform: [{ translateY: SCREEN_HEIGHT * 0.29 }],
+        },
+      ]}
+    >
       {/* Ambient glow — renders behind everything */}
       <Animated.View
         style={[
           styles.glow,
-          {
-            width: isLarge ? 200 : 120,
-            height: isLarge ? 200 : 120,
-            borderRadius: isLarge ? 100 : 60,
-          },
+          { width: glowSize, height: glowSize, borderRadius: glowSize / 2 },
+          isFullscreen && { top: 0.1 },
           glowStyle,
         ]}
       />
@@ -121,59 +137,61 @@ export default function Candle({ isLit, size = 'large', onPress, disabled, label
         <Animated.View
           style={[
             styles.flame,
-            {
-              width: isLarge ? 24 : 16,
-              height: flameHeight,
-              backgroundColor: Colors.flame,
-            },
+            { width: outerFlameWidth, height: flameHeight, backgroundColor: Colors.flame },
             flameStyle,
           ]}
         />
-        {/* Inner flame — bright yellow */}
+        {/* Inner flame — bright yellow core */}
         <Animated.View
           style={[
             styles.innerFlame,
-            {
-              width: isLarge ? 12 : 8,
-              height: flameHeight * 0.6,
-              backgroundColor: Colors.flameGlow,
-            },
+            { width: innerFlameWidth, height: flameHeight * 0.6, backgroundColor: Colors.flameGlow },
             innerFlameStyle,
           ]}
         />
       </View>
 
-      {/* Wick */}
-      <View
-        style={[
-          styles.wick,
-          {
-            height: isLarge ? 12 : 8,
-            width: 2,
-          },
-        ]}
-      />
+      {/* Wick + Body grouped so they dim together on fullscreen unlit state */}
+      <Animated.View style={[styles.wickAndBody, bodyDimStyle]}>
+        <View style={[styles.wick, { height: wickHeight, width: isFullscreen ? 3 : 2 }]} />
 
-      {/* Candle body */}
-      <View
-        style={[
-          styles.candleBody,
-          {
-            width: candleWidth,
-            height: candleHeight,
-            borderRadius: isLarge ? 8 : 5,
-            backgroundColor: isLit ? '#F5E6D3' : '#D4C4B0',
-          },
-        ]}
-      />
+        {/* Fullscreen uses a warm amber/ivory LinearGradient; small/large use a plain View */}
+        {isFullscreen ? (
+          <LinearGradient
+            colors={['#FFF8EC', '#F5E0BC', '#E8C090']}
+            start={{ x: 0.35, y: 0 }}
+            end={{ x: 0.65, y: 1 }}
+            style={[
+              styles.candleBody,
+              {
+                width: candleWidth,
+                height: candleHeight,
+                borderTopLeftRadius: 30,
+                borderTopRightRadius: 30,
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+              },
+            ]}
+          />
+        ) : (
+          <View
+            style={[
+              styles.candleBody,
+              {
+                width: candleWidth,
+                height: candleHeight,
+                borderRadius: isLarge ? 8 : 5,
+                backgroundColor: isLit ? '#F5E6D3' : '#D4C4B0',
+              },
+            ]}
+          />
+        )}
+      </Animated.View>
 
       {/* Label below the candle */}
       {label && (
         <Animated.Text
-          style={[
-            styles.label,
-            { fontSize: isLarge ? 16 : 13 },
-          ]}
+          style={[styles.label, { fontSize: isFullscreen ? 20 : isLarge ? 16 : 13 }]}
         >
           {label}
         </Animated.Text>
@@ -207,6 +225,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
     zIndex: 3,
+  },
+  wickAndBody: {
+    alignItems: 'center',
   },
   wick: {
     backgroundColor: '#333',
