@@ -119,8 +119,7 @@ export default function Candle({ isLit, size = 'large', onPress, disabled, label
           justifyContent: 'flex-end',
           transform: [{ translateY: SCREEN_HEIGHT * 0.29 }],
         },
-      ]}
-    >
+      ]}>
       {/* Ambient glow — renders behind everything */}
       <Animated.View
         style={[

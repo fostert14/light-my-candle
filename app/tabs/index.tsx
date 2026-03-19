@@ -12,6 +12,7 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
+// Note: Ensure your imports point to your actual local files
 import Candle from '@/components/Candle';
 import Sidebar from '@/components/Sidebar';
 import AddPartnerModal from '@/components/AddPartnerModal';
@@ -32,10 +33,11 @@ export default function CandleScreen() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [addPartnerOpen, setAddPartnerOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
+  // We no longer strictly need currentPage for the top bar logic, 
+  // but keeping it if you need it for pagination dots later!
+  const [currentPage, setCurrentPage] = useState(0); 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Subtle opacity pulse on the partner indicator icon when their candle is lit
   const partnerPulse = useSharedValue(0);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function CandleScreen() {
       partnerPulse.value = withRepeat(
         withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
         -1,
-        true, // reverse: oscillates back and forth between 0 and 1
+        true,
       );
     } else {
       cancelAnimation(partnerPulse);
@@ -57,7 +59,6 @@ export default function CandleScreen() {
 
   const isPaired = !!partnership?.user2_id;
 
-  // Screen 1 only lights the candle — tapping an already-lit candle does nothing
   const handleLightMine = async () => {
     if (myCandle?.is_lit) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -83,7 +84,7 @@ export default function CandleScreen() {
     );
   };
 
-  const goToPage = (page: number) => {
+const goToPage = (page: number) => {
     scrollRef.current?.scrollTo({ x: page * SCREEN_WIDTH, animated: true });
     setCurrentPage(page);
   };
@@ -91,77 +92,67 @@ export default function CandleScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {isPaired ? (
-        // ── Paired state: two-screen horizontal pager ────────────────────────
-        <>
-          {/* Top bar — content switches based on current page */}
-          <View style={styles.topBar}>
-            {currentPage === 0 ? (
-              <>
-                {/* Screen 1: hamburger (left) + partner indicator (right) */}
-                <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
-                  <Ionicons name="menu" size={28} color={Colors.warmWhite} />
-                </Pressable>
-                <Pressable onPress={() => goToPage(1)} hitSlop={12}>
-                  <Animated.View style={partnerIndicatorStyle}>
-                    <Ionicons
-                      name={partnerCandle?.is_lit ? 'flame' : 'flame-outline'}
-                      size={28}
-                      color={Colors.flame}
-                    />
-                  </Animated.View>
-                </Pressable>
-              </>
-            ) : (
-              // Screen 2: back arrow (left) + optional blow-out icon (right)
-              <>
-                <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
-                  <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
-                </Pressable>
-                {partnerCandle?.is_lit && (
-                  <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
-                    <Ionicons name="flash-off" size={20} color={Colors.warmWhite} />
-                  </Pressable>
-                )}
-              </>
-            )}
+        // ── Paired state: horizontal pager ────────────────────────
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(e) => {
+            const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+            setCurrentPage(page);
+          }}
+          style={styles.pager}>
+            
+          {/* ── Screen 1: My Candle ─────────────────────────────────────── */}
+          <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+            {/* Screen 1 Top Bar inside the page */}
+            <View style={styles.pageTopBar}>
+              <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
+                <Ionicons name="menu" size={28} color={Colors.warmWhite} />
+              </Pressable>
+              <Pressable onPress={() => goToPage(1)} hitSlop={12}>
+                <Animated.View style={partnerIndicatorStyle}>
+                  <Ionicons
+                    name={partnerCandle?.is_lit ? 'flame' : 'flame-outline'}
+                    size={28}
+                    color={Colors.flame}
+                  />
+                </Animated.View>
+              </Pressable>
+            </View>
+
+            <Candle isLit={myCandle?.is_lit ?? false} size="fullscreen" onPress={handleLightMine} />
           </View>
 
-          {/* Horizontal pager — swipe left/right between the two candle screens */}
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={(e) => {
-              const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-              setCurrentPage(page);
-            }}
-            style={styles.pager}
-          >
-            {/* ── Screen 1: My Candle ─────────────────────────────────────── */}
-            {/* The entire center area is the tap target; tapping only lights (never extinguishes) */}
-            <View
-              style={[styles.page, { width: SCREEN_WIDTH }]}
-            >
-              <Candle isLit={myCandle?.is_lit ?? false} size="fullscreen" onPress={handleLightMine} />
+          {/* ── Screen 2: Partner's Candle ──────────────────────────────── */}
+          <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+            {/* Screen 2 Top Bar inside the page */}
+            <View style={styles.pageTopBar}>
+              <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
+                <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
+              </Pressable>
+              {partnerCandle?.is_lit ? (
+                <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
+                  <Ionicons name="flash-off" size={20} color={Colors.warmWhite} />
+                </Pressable>
+              ) : (
+                <View style={{ width: 32 }} /> // Empty view to balance the flex layout if back arrow is alone
+              )}
             </View>
 
-            {/* ── Screen 2: Partner's Candle ──────────────────────────────── */}
-            <View style={[styles.page, { width: SCREEN_WIDTH }]}>
-              <Candle
-                isLit={partnerCandle?.is_lit ?? false}
-                size="fullscreen"
-                label={partnerName || 'Partner'}
-              />
-              {/* TODO: Premium "Reschedule" button — not tonight, maybe tomorrow */}
-            </View>
-          </ScrollView>
-        </>
+            <Candle
+              isLit={partnerCandle?.is_lit ?? false}
+              size="fullscreen"
+              label={partnerName || 'Partner'}
+            />
+          </View>
+        </ScrollView>
       ) : (
-        // ── Unpaired state: Add Partner button ───────────────────────────────
+        // ── Unpaired state remains unchanged ───────────────────────────────
         <>
-          <View style={styles.topBar}>
+          <View style={styles.staticTopBar}>
             <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
               <Ionicons name="menu" size={28} color={Colors.warmWhite} />
             </Pressable>
@@ -191,7 +182,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  topBar: {
+  // Used only for the Unpaired state now
+  staticTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -199,10 +191,23 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.sm,
   },
+  // The new moving top bar style
+  pageTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    zIndex: 10, // Ensures it stays above the Candle component
+  },
   iconButton: {
     // keeps consistent with existing hamburger hit area
   },
-  // ── Pager ──
   pager: {
     flex: 1,
   },
@@ -211,7 +216,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // ── Screen 2 actions ──
   blowOutIconButton: {
     backgroundColor: 'rgba(204, 85, 0, 0.20)',
     borderRadius: 18,
@@ -233,7 +237,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  // ── Unpaired layout ──
   unpairedContent: {
     flex: 1,
     alignItems: 'center',
