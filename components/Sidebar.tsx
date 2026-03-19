@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/constants/theme';
 
 const SIDEBAR_WIDTH = Dimensions.get('window').width * 0.72;
@@ -22,6 +22,13 @@ type Props = {
 };
 
 export default function Sidebar({ visible, onClose }: Props) {
+  // useSafeAreaInsets reads from the SafeAreaProvider that wraps the app.
+  // Because it's called OUTSIDE the Modal, the insets are already measured
+  // and available as plain numbers — no waiting for a layout pass inside
+  // the Modal. This is why SafeAreaView inside a Modal is unreliable on
+  // first open but this approach works every time.
+  const insets = useSafeAreaInsets();
+
   const [displayed, setDisplayed] = useState(false);
   const translateX = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -45,7 +52,6 @@ export default function Sidebar({ visible, onClose }: Props) {
     }
   }, [visible]);
 
-  // Called by Modal's onShow — fires after the native modal is on screen.
   const handleModalShow = () => {
     translateX.setValue(-SIDEBAR_WIDTH);
     overlayOpacity.setValue(0);
@@ -78,7 +84,10 @@ export default function Sidebar({ visible, onClose }: Props) {
 
         {/* Sidebar panel */}
         <Animated.View style={[styles.sidebar, { transform: [{ translateX }] }]}>
-          <SafeAreaView style={styles.safeArea} edges={['top']}>
+          {/* Instead of SafeAreaView, we apply the top inset as padding manually.
+              The inset value comes from the hook which reads from the app-level
+              SafeAreaProvider — it's a plain number, already known, no measuring needed. */}
+          <View style={[styles.safeArea, { paddingTop: insets.top }]}>
             <View style={styles.header}>
               <Text style={styles.appName}>Light My Candle</Text>
             </View>
@@ -89,7 +98,7 @@ export default function Sidebar({ visible, onClose }: Props) {
                 <Text style={styles.menuLabel}>Settings</Text>
               </Pressable>
             </View>
-          </SafeAreaView>
+          </View>
         </Animated.View>
       </View>
     </Modal>
