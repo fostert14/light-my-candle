@@ -35,14 +35,14 @@ export default function CandleScreen() {
     await blowOutPartnerCandle();
   };
 
-  const getStatusMessage = () => {
-    const myLit = myCandle?.is_lit;
-    const theirLit = partnerCandle?.is_lit;
-    if (myLit && theirLit) return "You're both in the mood ✨";
-    if (myLit && !theirLit) return 'Your candle is lit...waiting';
-    if (!myLit && theirLit) return `${partnerName || 'Partner'} lit their candle 👀`;
-    return 'All quiet tonight';
-  };
+  // const getStatusMessage = () => {
+  //   const myLit = myCandle?.is_lit;
+  //   const theirLit = partnerCandle?.is_lit;
+  //   if (myLit && theirLit) return "You're both in the mood ✨";
+  //   if (myLit && !theirLit) return 'Your candle is lit...waiting';
+  //   if (!myLit && theirLit) return `${partnerName || 'Partner'} lit their candle 👀`;
+  //   return 'All quiet tonight';
+  // };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,7 +57,6 @@ export default function CandleScreen() {
       {isPaired ? (
         // ── Paired state: show both candles ──────────────────────
         <View style={styles.pairedContent}>
-          <Text style={styles.statusText}>{getStatusMessage()}</Text>
 
           <View style={styles.candleRow}>
             <Candle
