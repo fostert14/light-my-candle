@@ -105,12 +105,11 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
             setPartnerCandle(updated);
             // If partner just lit their candle AND my candle is already lit → match!
             if (updated.is_lit && myCandleRef.current?.is_lit) {
-              await supabase.from('candle_events').insert({
-                partnership_id: partnership.id,
-                user_id: user.id,
-                event_type: 'matched',
-                heat_level: myCandleRef.current?.heat_level || 'medium',
-                mood: myCandleRef.current?.mood || null,
+              await supabase.rpc('log_match_event', {
+                p_partnership_id: partnership.id,
+                p_user_id: user.id,
+                p_heat_level: myCandleRef.current?.heat_level || 'medium',
+                p_mood: myCandleRef.current?.mood || null,
               });
             }
           }
@@ -209,12 +208,11 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
 
     // If lighting and partner is already lit → log a match
     if (newState && partnerCandle?.is_lit) {
-      await supabase.from('candle_events').insert({
-        partnership_id: partnership.id,
-        user_id: user.id,
-        event_type: 'matched',
-        heat_level: myCandle.heat_level || 'medium',
-        mood: myCandle.mood || null,
+      await supabase.rpc('log_match_event', {
+        p_partnership_id: partnership.id,
+        p_user_id: user.id,
+        p_heat_level: myCandle.heat_level || 'medium',
+        p_mood: myCandle.mood || null,
       });
     }
 
