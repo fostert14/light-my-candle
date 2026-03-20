@@ -68,7 +68,7 @@ const SIZE_CONFIG = {
     flameHeight: 90,
     wickHeight: 20,
     wickWidth: 3,
-    glowSize: SCREEN_WIDTH * 0.85,
+    glowSize: SCREEN_WIDTH * 1.3,
     outerFlameWidth: 44,
     innerFlameWidth: 22,
     bodyRadius: 0,
@@ -166,7 +166,7 @@ export default function Candle({ isLit, size = 'large', onPress, disabled, label
             width: config.glowSize,
             height: config.glowSize,
             borderRadius: config.glowSize / 2,
-            bottom: isFullscreen ? config.candleHeight * 1.05 : config.candleHeight * 0.25,
+            bottom: isFullscreen ? config.candleHeight : config.candleHeight * 0.25,
           },
           glowStyle,
         ]}

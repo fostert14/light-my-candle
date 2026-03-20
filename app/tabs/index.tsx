@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -143,7 +143,9 @@ const goToPage = (page: number) => {
     </Pressable>
     {partnerCandle?.is_lit ? (
       <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
-        <Ionicons name="flash-off" size={20} color={Colors.warmWhite} />
+        <Image 
+          source={require('../../assets/gust-icon.png')} 
+          style = {{ width: 20, height: 20, tintColor: Colors.warmWhite }} />
       </Pressable>
     ) : (
       <View style={{ width: 32 }} />
