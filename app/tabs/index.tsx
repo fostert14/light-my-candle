@@ -126,28 +126,32 @@ const goToPage = (page: number) => {
             <Candle isLit={myCandle?.is_lit ?? false} size="fullscreen" onPress={handleLightMine} />
           </View>
 
-          {/* ── Screen 2: Partner's Candle ──────────────────────────────── */}
-          <View style={[styles.page, { width: SCREEN_WIDTH }]}>
-            {/* Screen 2 Top Bar inside the page */}
-            <View style={styles.pageTopBar}>
-              <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
-                <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
-              </Pressable>
-              {partnerCandle?.is_lit ? (
-                <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
-                  <Ionicons name="flash-off" size={20} color={Colors.warmWhite} />
-                </Pressable>
-              ) : (
-                <View style={{ width: 32 }} /> // Empty view to balance the flex layout if back arrow is alone
-              )}
-            </View>
+         {/* ── Screen 2: Partner's Candle ──────────────────────────────── */}
+<View style={[styles.page, { width: SCREEN_WIDTH }]}>
+  <View style={styles.pageTopBar}>
+    <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
+      <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
+    </Pressable>
+    {partnerCandle?.is_lit ? (
+      <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
+        <Ionicons name="flash-off" size={20} color={Colors.warmWhite} />
+      </Pressable>
+    ) : (
+      <View style={{ width: 32 }} />
+    )}
+  </View>
 
-            <Candle
-              isLit={partnerCandle?.is_lit ?? false}
-              size="fullscreen"
-              label={partnerName || 'Partner'}
-            />
-          </View>
+  <Candle
+    isLit={partnerCandle?.is_lit ?? false}
+    size="fullscreen"
+    // label removed — rendered separately below
+  />
+
+  {/* Partner name positioned absolutely so it doesn't affect candle layout */}
+  <Text style={styles.partnerLabel}>
+  {partnerName ? `${partnerName}'s Candle` : 'Partner'}
+</Text>
+</View>
         </ScrollView>
       ) : (
         // ── Unpaired state remains unchanged ───────────────────────────────
@@ -265,4 +269,14 @@ const styles = StyleSheet.create({
     color: Colors.coolGray,
     textAlign: 'center',
   },
+  partnerLabel: {
+  position: 'absolute',
+  top: 80,
+  fontSize: 20,
+  fontWeight: '500',
+  letterSpacing: 0.5,
+  color: Colors.warmGray,
+  textAlign: 'center',
+  alignSelf: 'center',
+},
 });
