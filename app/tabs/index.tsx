@@ -112,7 +112,7 @@ const goToPage = (page: number) => {
               <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
                 <Ionicons name="menu" size={28} color={Colors.warmWhite} />
               </Pressable>
-              <Pressable onPress={() => goToPage(1)} hitSlop={12}>
+              {/* <Pressable onPress={() => goToPage(1)} hitSlop={12}>
                 <Animated.View style={partnerIndicatorStyle}>
                   <Ionicons
                     name={partnerCandle?.is_lit ? 'flame' : 'flame-outline'}
@@ -120,10 +120,19 @@ const goToPage = (page: number) => {
                     color={Colors.flame}
                   />
                 </Animated.View>
-              </Pressable>
+              </Pressable> */}
             </View>
 
             <Candle isLit={myCandle?.is_lit ?? false} size="fullscreen" onPress={handleLightMine} />
+
+            {partnerCandle?.is_lit && (
+              <View style={styles.partnerLitRow}>
+                <Text style={styles.partnerLitText}>
+                  {partnerName ? `${partnerName} has lit their candle` : 'Partner has lit their candle'}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color={Colors.warmGray} />
+              </View>
+            )}
           </View>
 
          {/* ── Screen 2: Partner's Candle ──────────────────────────────── */}
@@ -278,5 +287,19 @@ const styles = StyleSheet.create({
   color: Colors.warmGray,
   textAlign: 'center',
   alignSelf: 'center',
+},
+  partnerLitRow: {
+  position: 'absolute',
+  top: 80,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  alignSelf: 'center',
+},
+  partnerLitText: {
+  fontSize: 20,
+  fontWeight: '500',
+  letterSpacing: 0.5,
+  color: Colors.warmGray,
 },
 });
