@@ -67,7 +67,7 @@ export default function Sidebar({ visible, onClose }: Props) {
 
   const handleSettings = () => {
     onClose();
-    setTimeout(() => router.push('/tabs/settings'), 250);
+    setTimeout(() => router.push('/(app)/settings'), 250);
   };
 
   return (

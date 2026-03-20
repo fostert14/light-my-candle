@@ -33,7 +33,7 @@ export default function LoginScreen() {
       Alert.alert('Login failed', error.message);
     } else {
       // Auth state change triggers the redirect in index.tsx automatically
-      router.replace('/tabs');
+      router.replace('/(app)');
     }
   };
 
