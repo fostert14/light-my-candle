@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
+import { sendPushNotification } from '@/lib/notifications';
 
 // A "partnership" row in the database — two users linked together
 type Partnership = {
@@ -18,6 +19,8 @@ type CandleStatus = {
   is_lit: boolean;
   lit_at: string | null;
   partnership_id: string;
+  heat_level?: string;
+  mood?: string | null;
 };
 
 type CandleContextType = {
@@ -44,6 +47,10 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
   const [partnerName, setPartnerName] = useState<string | null>(null);
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Ref to avoid stale closure in the realtime callback
+  const myCandleRef = useRef(myCandle);
+  useEffect(() => { myCandleRef.current = myCandle; }, [myCandle]);
 
   // Figure out the partner's user ID from the partnership row
   const getPartnerId = useCallback(() => {
@@ -89,13 +96,23 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
           table: 'candle_status',
           filter: `partnership_id=eq.${partnership.id}`,
         },
-        (payload) => {
+        async (payload) => {
           // When a candle row changes, figure out whose it is and update state
           const updated = payload.new as CandleStatus;
           if (updated.user_id === user.id) {
             setMyCandle(updated);
           } else {
             setPartnerCandle(updated);
+            // If partner just lit their candle AND my candle is already lit → match!
+            if (updated.is_lit && myCandleRef.current?.is_lit) {
+              await supabase.from('candle_events').insert({
+                partnership_id: partnership.id,
+                user_id: user.id,
+                event_type: 'matched',
+                heat_level: myCandleRef.current?.heat_level || 'medium',
+                mood: myCandleRef.current?.mood || null,
+              });
+            }
           }
         }
       )
@@ -159,32 +176,98 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
 
   // Toggle YOUR candle on/off
   const toggleMyCandle = async () => {
-    if (!myCandle) return;
+    if (!myCandle || !partnership || !user) return;
 
     const newState = !myCandle.is_lit;
-    await supabase
+
+    // Before lighting, upsert daily usage count
+    if (newState) {
+      await supabase.from('daily_light_usage').upsert(
+        { user_id: user.id, date: new Date().toISOString().slice(0, 10), light_count: 1 },
+        { onConflict: 'user_id,date' }
+      );
+    }
+
+    const { error } = await supabase
       .from('candle_status')
       .update({
         is_lit: newState,
         lit_at: newState ? new Date().toISOString() : null,
       })
       .eq('id', myCandle.id);
-    // No need to manually update state — the real-time subscription handles it!
+
+    if (error) return;
+
+    // Log the candle event
+    await supabase.from('candle_events').insert({
+      partnership_id: partnership.id,
+      user_id: user.id,
+      event_type: newState ? 'lit' : 'blown_out',
+      heat_level: myCandle.heat_level || 'medium',
+      mood: myCandle.mood || null,
+    });
+
+    // If lighting and partner is already lit → log a match
+    if (newState && partnerCandle?.is_lit) {
+      await supabase.from('candle_events').insert({
+        partnership_id: partnership.id,
+        user_id: user.id,
+        event_type: 'matched',
+        heat_level: myCandle.heat_level || 'medium',
+        mood: myCandle.mood || null,
+      });
+    }
+
+    // Send push notification to partner when lighting
+    if (newState) {
+      const partnerId = getPartnerId();
+      if (partnerId) {
+        const { data: partnerProfile } = await supabase
+          .from('profiles')
+          .select('push_token, display_name')
+          .eq('id', partnerId)
+          .single();
+
+        if (partnerProfile?.push_token) {
+          const myName = user.user_metadata?.display_name || 'Your partner';
+          await sendPushNotification(
+            partnerProfile.push_token,
+            `${myName} lit their candle 🕯️`,
+            'Open the app to see their flame'
+          );
+        }
+      }
+    }
   };
 
   // Blow out your PARTNER'S candle
   const blowOutPartnerCandle = async () => {
-    if (!partnerCandle || !partnerCandle.is_lit) return;
+    if (!partnerCandle || !partnerCandle.is_lit || !partnership || !user) return;
 
-    await supabase
+    const { error } = await supabase
       .from('candle_status')
       .update({ is_lit: false, lit_at: null })
       .eq('id', partnerCandle.id);
+
+    if (error) return;
+
+    await supabase.from('candle_events').insert({
+      partnership_id: partnership.id,
+      user_id: user.id,
+      event_type: 'blown_out',
+      heat_level: partnerCandle.heat_level || 'medium',
+      mood: partnerCandle.mood || null,
+    });
   };
 
   // Generate a 6-character code for your partner to join
   const generatePairCode = async (): Promise<string | null> => {
     if (!user) return null;
+
+    // Already have a partnership — return the existing code
+    if (partnership) {
+      return pairCode || partnership.pair_code || null;
+    }
 
     // Create a random 6-char alphanumeric code
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();

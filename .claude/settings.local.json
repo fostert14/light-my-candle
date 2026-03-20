@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx expo install expo-linking)"
+      "Bash(npx expo install expo-linking)",
+      "Bash(npx expo install expo-device)",
+      "Bash(npm install expo-device --legacy-peer-deps)"
     ]
   }
 }

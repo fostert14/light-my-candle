@@ -487,6 +487,19 @@ insert into public.candle_designs (name, design_key, description, color_primary,
 
 
 -- ============================================================
+-- ADD 'matched' TO candle_events event_type CONSTRAINT
+-- ============================================================
+-- Run this in Supabase Dashboard → SQL Editor
+
+ALTER TABLE public.candle_events
+  DROP CONSTRAINT IF EXISTS candle_events_event_type_check;
+
+ALTER TABLE public.candle_events
+  ADD CONSTRAINT candle_events_event_type_check
+  CHECK (event_type IN ('lit', 'blown_out', 'expired', 'scheduled', 'matched'));
+
+
+-- ============================================================
 -- FEATURE GATING REFERENCE
 -- ============================================================
 -- This isn't SQL — it's a reference for the frontend/Claude Code.

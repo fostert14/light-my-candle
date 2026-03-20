@@ -65,6 +65,25 @@ export default function CandleScreen() {
     await toggleMyCandle();
   };
 
+  const handleBlowOutMine = () => {
+    if (!myCandle?.is_lit) return;
+    Alert.alert(
+      'Blow out your candle?',
+      undefined,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await toggleMyCandle();
+          },
+        },
+      ],
+    );
+  };
+
   const handleBlowOut = () => {
     if (!partnerCandle?.is_lit) return;
     Alert.alert(
@@ -112,15 +131,16 @@ const goToPage = (page: number) => {
               <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
                 <Ionicons name="menu" size={28} color={Colors.warmWhite} />
               </Pressable>
-              {/* <Pressable onPress={() => goToPage(1)} hitSlop={12}>
-                <Animated.View style={partnerIndicatorStyle}>
-                  <Ionicons
-                    name={partnerCandle?.is_lit ? 'flame' : 'flame-outline'}
-                    size={28}
-                    color={Colors.flame}
+              {myCandle?.is_lit ? (
+                <Pressable onPress={handleBlowOutMine} hitSlop={12} style={styles.blowOutIconButton}>
+                  <Image
+                    source={require('../../assets/gust-icon.png')}
+                    style={{ width: 20, height: 20, tintColor: Colors.warmWhite }}
                   />
-                </Animated.View>
-              </Pressable> */}
+                </Pressable>
+              ) : (
+                <View style={{ width: 32 }} />
+              )}
             </View>
 
             <Candle isLit={myCandle?.is_lit ?? false} size="fullscreen" onPress={handleLightMine} />
