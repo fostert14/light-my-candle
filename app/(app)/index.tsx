@@ -131,6 +131,7 @@ const goToPage = (page: number) => {
               <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
                 <Ionicons name="menu" size={28} color={Colors.warmWhite} />
               </Pressable>
+              <Text style={styles.topBarTitle}>Your Candle</Text>
               {myCandle?.is_lit ? (
                 <Pressable onPress={handleBlowOutMine} hitSlop={12} style={styles.blowOutIconButton}>
                   <Image
@@ -161,11 +162,14 @@ const goToPage = (page: number) => {
     <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
       <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
     </Pressable>
+    <Text style={styles.topBarTitle}>
+      {partnerName ? `${partnerName}'s Candle` : "Partner's Candle"}
+    </Text>
     {partnerCandle?.is_lit ? (
       <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
-        <Image 
-          source={require('../../assets/gust-icon.png')} 
-          style = {{ width: 20, height: 20, tintColor: Colors.warmWhite }} />
+        <Image
+          source={require('../../assets/gust-icon.png')}
+          style={{ width: 20, height: 20, tintColor: Colors.warmWhite }} />
       </Pressable>
     ) : (
       <View style={{ width: 32 }} />
@@ -175,13 +179,7 @@ const goToPage = (page: number) => {
   <Candle
     isLit={partnerCandle?.is_lit ?? false}
     size="fullscreen"
-    // label removed — rendered separately below
   />
-
-  {/* Partner name positioned absolutely so it doesn't affect candle layout */}
-  <Text style={styles.partnerLabel}>
-  {partnerName ? `${partnerName}'s Candle` : 'Partner'}
-</Text>
 </View>
         </ScrollView>
       ) : (
@@ -300,24 +298,27 @@ const styles = StyleSheet.create({
     color: Colors.coolGray,
     textAlign: 'center',
   },
-  partnerLabel: {
-  position: 'absolute',
-  top: 80,
-  fontSize: 20,
-  fontWeight: '500',
-  letterSpacing: 0.5,
-  color: Colors.warmGray,
-  textAlign: 'center',
-  alignSelf: 'center',
-},
+  topBarTitle: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+    color: Colors.warmGray,
+  },
   partnerLitRow: {
-  position: 'absolute',
-  top: 80,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 6,
-  alignSelf: 'center',
-},
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
   partnerLitText: {
   fontSize: 20,
   fontWeight: '500',
