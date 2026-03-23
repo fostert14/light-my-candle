@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { sendPushNotification } from '@/lib/notifications';
 
+const DEFAULT_TIMEOUT_HOURS = 10;
+
 // A "partnership" row in the database — two users linked together
 type Partnership = {
   id: string;
@@ -30,6 +32,8 @@ type CandleContextType = {
   partnerName: string | null;           // Partner's display name
   pairCode: string | null;             // Your generated pair code (for sharing)
   loading: boolean;
+  candleTimeoutHours: number;           // Hours before candle auto-extinguishes (1–24)
+  setCandleTimeoutHours: (hours: number) => Promise<void>;
   toggleMyCandle: () => Promise<void>;           // Light or extinguish YOUR candle
   blowOutPartnerCandle: () => Promise<void>;     // Blow out your PARTNER'S candle
   generatePairCode: () => Promise<string | null>; // Create a code to share
@@ -47,10 +51,66 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
   const [partnerName, setPartnerName] = useState<string | null>(null);
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [candleTimeoutHours, setCandleTimeoutHoursState] = useState<number>(
+    user?.user_metadata?.candle_timeout_hours ?? DEFAULT_TIMEOUT_HOURS
+  );
 
-  // Ref to avoid stale closure in the realtime callback
+  // Refs to avoid stale closures in async callbacks
   const myCandleRef = useRef(myCandle);
   useEffect(() => { myCandleRef.current = myCandle; }, [myCandle]);
+  const partnershipRef = useRef(partnership);
+  useEffect(() => { partnershipRef.current = partnership; }, [partnership]);
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep candleTimeoutHours in sync with user metadata (e.g. after login)
+  useEffect(() => {
+    setCandleTimeoutHoursState(user?.user_metadata?.candle_timeout_hours ?? DEFAULT_TIMEOUT_HOURS);
+  }, [user]);
+
+  // Auto-extinguish timer — fires when candle has been lit past the timeout duration
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!myCandle?.is_lit || !myCandle?.lit_at) return;
+
+    const litAt = new Date(myCandle.lit_at).getTime();
+    const remaining = litAt + candleTimeoutHours * 60 * 60 * 1000 - Date.now();
+
+    const doExtinguish = async () => {
+      const candle = myCandleRef.current;
+      const p = partnershipRef.current;
+      const u = userRef.current;
+      if (!candle?.is_lit || !p || !u) return;
+
+      await supabase.from('candle_status').update({ is_lit: false, lit_at: null }).eq('id', candle.id);
+      await supabase.from('candle_events').insert({
+        partnership_id: p.id,
+        user_id: u.id,
+        event_type: 'blown_out',
+        heat_level: candle.heat_level || 'medium',
+        mood: candle.mood || null,
+      });
+    };
+
+    if (remaining <= 0) {
+      doExtinguish();
+      return;
+    }
+
+    timeoutRef.current = setTimeout(doExtinguish, remaining);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [myCandle?.is_lit, myCandle?.lit_at, candleTimeoutHours]);
 
   // Figure out the partner's user ID from the partnership row
   const getPartnerId = useCallback(() => {
@@ -336,6 +396,13 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  // Save the candle timeout preference to user metadata
+  const setCandleTimeoutHours = async (hours: number) => {
+    const clamped = Math.max(1, Math.min(24, Math.round(hours)));
+    setCandleTimeoutHoursState(clamped);
+    supabase.auth.updateUser({ data: { candle_timeout_hours: clamped } });
+  };
+
   // Disconnect from partner — deletes the partnership and both candles
   const unpair = async () => {
     if (!partnership) return;
@@ -359,6 +426,8 @@ export function CandleProvider({ children }: { children: React.ReactNode }) {
         partnerName,
         pairCode,
         loading,
+        candleTimeoutHours,
+        setCandleTimeoutHours,
         toggleMyCandle,
         blowOutPartnerCandle,
         generatePairCode,

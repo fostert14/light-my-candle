@@ -16,7 +16,7 @@ import { Colors, Spacing } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
-  const { partnership, partnerName, unpair } = useCandle();
+  const { partnership, partnerName, unpair, candleTimeoutHours, setCandleTimeoutHours } = useCandle();
 
   const isPaired = !!(partnership?.user2_id);
 
@@ -65,6 +65,31 @@ export default function SettingsScreen() {
             <Pressable style={styles.outlineButton} onPress={handleSignOut}>
               <Text style={styles.outlineButtonText}>Sign Out</Text>
             </Pressable>
+          </View>
+        </View>
+
+        {/* CANDLE */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Candle</Text>
+          <View style={styles.card}>
+            <Text style={styles.settingLabel}>Auto-extinguish after</Text>
+            <View style={styles.stepper}>
+              <Pressable
+                style={[styles.stepperButton, candleTimeoutHours <= 1 && styles.stepperButtonDisabled]}
+                onPress={() => setCandleTimeoutHours(candleTimeoutHours - 1)}
+                disabled={candleTimeoutHours <= 1}
+              >
+                <Text style={styles.stepperButtonText}>−</Text>
+              </Pressable>
+              <Text style={styles.stepperValue}>{candleTimeoutHours}h</Text>
+              <Pressable
+                style={[styles.stepperButton, candleTimeoutHours >= 24 && styles.stepperButtonDisabled]}
+                onPress={() => setCandleTimeoutHours(candleTimeoutHours + 1)}
+                disabled={candleTimeoutHours >= 24}
+              >
+                <Text style={styles.stepperButtonText}>+</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
@@ -179,5 +204,42 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontSize: 16,
     fontWeight: '500',
+  },
+  settingLabel: {
+    fontSize: 16,
+    color: Colors.warmWhite,
+    fontWeight: '500',
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  stepperButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.flame,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonDisabled: {
+    borderColor: Colors.coolGray,
+  },
+  stepperButtonText: {
+    fontSize: 20,
+    color: Colors.flame,
+    lineHeight: 24,
+  },
+  stepperValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.warmWhite,
+    minWidth: 48,
+    textAlign: 'center',
   },
 });

@@ -131,7 +131,9 @@ const goToPage = (page: number) => {
               <Pressable onPress={() => setSidebarOpen(true)} style={styles.iconButton} hitSlop={12}>
                 <Ionicons name="menu" size={28} color={Colors.warmWhite} />
               </Pressable>
-              <Text style={styles.topBarTitle}>Your Candle</Text>
+              <View pointerEvents="none" style={styles.topBarTitleContainer}>
+                <Text style={styles.topBarTitle}>Your Candle</Text>
+              </View>
               {myCandle?.is_lit ? (
                 <Pressable onPress={handleBlowOutMine} hitSlop={12} style={styles.blowOutIconButton}>
                   <Image
@@ -162,9 +164,11 @@ const goToPage = (page: number) => {
     <Pressable onPress={() => goToPage(0)} style={styles.iconButton} hitSlop={12}>
       <Ionicons name="chevron-back" size={28} color={Colors.warmWhite} />
     </Pressable>
-    <Text style={styles.topBarTitle}>
-      {partnerName ? `${partnerName}'s Candle` : "Partner's Candle"}
-    </Text>
+    <View pointerEvents="none" style={styles.topBarTitleContainer}>
+      <Text style={styles.topBarTitle}>
+        {partnerName ? `${partnerName}'s Candle` : "Partner's Candle"}
+      </Text>
+    </View>
     {partnerCandle?.is_lit ? (
       <Pressable onPress={handleBlowOut} hitSlop={12} style={styles.blowOutIconButton}>
         <Image
@@ -298,10 +302,13 @@ const styles = StyleSheet.create({
     color: Colors.coolGray,
     textAlign: 'center',
   },
-  topBarTitle: {
+  topBarTitleContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
+    alignItems: 'center',
+  },
+  topBarTitle: {
     textAlign: 'center',
     fontSize: 20,
     fontWeight: '500',
